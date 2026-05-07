@@ -1,0 +1,118 @@
+import Resume from "../models/resume.model.js";
+import ai from "../config/ai.js";
+
+// *******************************************************************************
+export const enhanceProfessionalSummary = async (req, res) => {
+  try {
+    const {userContent} = req.body;
+    if(!userContent){
+      return res.status(400).json({message: "please fill the field"});
+    }
+    const response = await ai.chat.completions.create({
+      model: process.env.OPENAI_MODEL,
+      messages: [
+        {role: "system", content: "You are an expert in resume writing. Your task is to enhance the professional summary of a resume. The summary should be 1-2 sentences also highlighting key skills, experience and career objectives. Make it compelling and ATS-friendly and only return text no options or anything else."},
+        {role: "user", content: userContent}
+      ]
+    });
+    const enhancedContent = response.choices[0].message.content;
+    return res.status(200).json({enhancedContent});
+  } catch (error) {
+    console.log("error in enhance summary ai controller", error.message);
+    return res.status(500).json({message: "internal server error"});
+  }
+}
+
+
+
+// *******************************************************************************
+export const enhanceJobDescription = async (req, res) => {
+  try {
+    const {userContent} = req.body;
+    if(!userContent){
+      return res.status(400).json({message: "please fill the field"});
+    }
+    const response = await ai.chat.completions.create({
+      model: process.env.OPENAI_MODEL,
+      messages: [
+        {role: "system", content: "You are an expert in resume writing. Your task is to enhance the job description of a resume. The job description should be only in 1-2 sentences also highlighting key responsabilities and achievements. Use action verbs and quantifiable results where possible. Make it ATS-friendly and only return text no options or anything else."},
+        {role: "user", content: userContent}
+      ]
+    });
+    const enhancedContent = response.choices[0].message.content;
+    return res.status(200).json({enhancedContent});
+  } catch (error) {
+    console.log("error in enhance job description ai controller", error.message);
+    return res.status(500).json({message: "internal server error"});
+  }
+}
+
+
+
+// *******************************************************************************
+export const uploadResume = async (req, res) => {
+  try {
+    const {resumeText, title} = req.body;
+    const userId = req.userId;
+    if(!resumeText){
+      return res.status(400).json({message: "please fill the field"});
+    }
+    const systemPrompt = "You are an expert AI Agent to extract data from resume.";
+    const userPrompt = `extract data from this resume: ${resumeText} 
+     Provide data in the following JSON format with no additional text before or after: 
+        {
+          professional_summary: {type: String, default: ""},
+          skills: [{type: String}],
+          personal_info: {
+            image: {type: String, default: ""},
+            full_name: {type: String, default: ""},
+            profession: {type: String, default: ""},
+            email: {type: String, default: ""},
+            phone: {type: String, default: ""},
+            location: {type: String, default: ""},
+            linkedin: {type: String, default: ""},
+            website: {type: String, default: ""},
+          },
+          experience: [
+            {
+              company: String,
+              postion: String,
+              start_date: String,
+              end_date: String,
+              is_current: {type: Boolean}
+            }
+          ],
+          projects: [
+            {
+              name: String,
+              type: String,
+              description: String
+            }
+          ],
+          education: [
+            {
+              institution: String,
+              degree: String,
+              filed: String,
+              graduation: String,
+              gpa: String
+            }
+          ]
+    }`;
+    const response = await ai.chat.completions.create({
+      model: process.env.OPENAI_MODEL,
+      messages: [
+        {role: "system", content: systemPrompt},
+        {role: "user", content: userPrompt}
+      ],
+      response_format: {type: "json_object"}
+    });
+    const extractedData = response.choices[0].message.content;
+    const parsedData = JSON.parse(extractedData);
+    const newResume = await Resume.create({userId, title, ...parsedData});
+    res.json({resumeId: newResume._id});
+  } catch (error) {
+    console.log("error in ai upload resume controller", error.message);
+    return res.status(500).json({message: "internal server error" && error.message});
+  }
+}
