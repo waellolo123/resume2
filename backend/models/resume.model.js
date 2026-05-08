@@ -20,27 +20,28 @@ const resumeSchema = new mongoose.Schema({
   },
   experience: [
     {
-      company: String,
-      postion: String,
-      start_date: String,
-      end_date: String,
+      company: {type: String},
+      position: {type: String},
+      start_date: {type: String},
+      end_date: {type: String},
+      description: {type: String},
       is_current: {type: Boolean}
     }
   ],
-  projects: [
+  project: [
     {
-      name: String,
-      type: String,
-      description: String
+      name: {type: String},
+      type: {type: String},
+      description: {type: String}
     }
   ],
    education: [
     {
-      institution: String,
-      degree: String,
-      filed: String,
-      graduation: String,
-      gpa: String
+      institution: {type: String},
+      degree: {type: String},
+      field: {type: String},
+      graduation_date: {type: String},
+      gpa: {type: String}
     }
   ],
 }, {timeStamps: true, minimize: false});
